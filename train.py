@@ -40,6 +40,7 @@ def train(opt):
     loader = DataLoader(opt)
     opt.vocab_size = loader.vocab_size
     opt.seq_length = loader.seq_length
+    opt.ix_to_word = loader.get_vocab()
 
     tb_summary_writer = tb and tb.SummaryWriter(opt.checkpoint_path)
 
@@ -193,7 +194,7 @@ def train(opt):
                 add_summary_value(tb_summary_writer, 'learning_rate', opt.current_lr, iteration)
                 add_summary_value(tb_summary_writer, 'scheduled_sampling_prob', model.ss_prob, iteration)
                 if sc_flag:
-                    add_summary_value(tb_summary_writer, 'avg_reward', model_out['reward'].mean(), iteration)
+                    add_summary_value(tb_summary_writer, 'avg_reward', model_out['reward'].mean().item(), iteration)
 
                 loss_history[iteration] = train_loss if not sc_flag else model_out['reward'].mean()
                 lr_history[iteration] = opt.current_lr

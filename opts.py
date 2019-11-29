@@ -150,7 +150,9 @@ def parse_opt():
                     help='The reward weight from cider')
     parser.add_argument('--bleu_reward_weight', type=float, default=0,
                     help='The reward weight from bleu4')
-
+    parser.add_argument('--bert_reward_weight', type=float, default=0,
+                    help='The reward weight from bert')
+    
     args = parser.parse_args()
 
     # Check if args are valid

@@ -18,12 +18,48 @@ import misc.utils as utils
 bad_endings = ['a','an','the','in','for','at','of','with','before','after','on','upon','near','to','is','are','am']
 bad_endings += ['the']
 
+
 def count_bad(sen):
     sen = sen.split(' ')
     if sen[-1] in bad_endings:
         return 1
     else:
         return 0
+
+
+def bert_score_eval(dataset, preds):
+    print("start evaluating using BERT score")
+    if 'coco' in dataset:
+        annFile = 'coco-caption/annotations/captions_val2014.json'
+    else:
+        raise ValueError("BERT score has not been implemented for dataset %s" % dataset)
+
+    from misc.rewards import Bert_scorer
+    assert Bert_scorer is not None
+
+    with open(annFile) as f:
+        ann_dict = json.load(f)
+    anns = ann_dict['annotations']
+
+    preds_dict = {p['image_id']: p['caption'] for p in preds}
+    image_ids = list(preds_dict.keys())
+    assert len(preds_dict) == len(preds), "duplicated image id found in prediction result"
+
+    gts = []
+    res = []
+    for ann in anns:
+        image_id = ann['image_id']
+        if image_id in preds_dict:
+            gts.append(ann['caption'])
+            res.append(preds_dict[image_id])
+    print("{} sentences in total".format(len(gts)))
+
+    P, R, F = Bert_scorer.score(res, gts)
+    P, R, F = P.mean().item(), R.mean().item(), F.mean().item()
+    print("BERT score: P = {:.2f}, R = {:.2f}, F = {:.2f}".format(P, R, F))
+    out = {'bert_P': P, 'bert_R': R, 'bert_F': F}
+    return out
+
 
 def language_eval(dataset, preds, model_id, split):
     import sys
@@ -34,6 +70,7 @@ def language_eval(dataset, preds, model_id, split):
         annFile = 'coco-caption/f30k_captions4eval.json'
     from pycocotools.coco import COCO
     from pycocoevalcap.eval import COCOEvalCap
+    from misc.rewards import Bert_scorer
 
     # encoder.FLOAT_REPR = lambda o: format(o, '.3f')
 
@@ -49,6 +86,9 @@ def language_eval(dataset, preds, model_id, split):
     print('using %d/%d predictions' % (len(preds_filt), len(preds)))
     json.dump(preds_filt, open(cache_path, 'w')) # serialize to temporary json file. Sigh, COCO API...
 
+    # evalute prediction with BERT score
+    bert_out = bert_score_eval(dataset, preds_filt)
+
     cocoRes = coco.loadRes(cache_path)
     cocoEval = COCOEvalCap(coco, cocoRes)
     cocoEval.params['image_id'] = cocoRes.getImgIds()
@@ -58,6 +98,7 @@ def language_eval(dataset, preds, model_id, split):
     out = {}
     for metric, score in cocoEval.eval.items():
         out[metric] = score
+    out.update(bert_out)
 
     imgToEval = cocoEval.imgToEval
     for p in preds_filt:
