@@ -91,8 +91,8 @@ def get_self_critical_reward(greedy_res, data_gts, gen_result, opt):
         bleu_scores = 0
     if opt.bert_reward_weight > 0:
         P, R, F = Bert_scorer.score(res_bert, gts_bert)
-        bert_scores = np.array(P)
-        print('BERT scores:', P.mean().item())
+        bert_scores = np.array(F)
+        print('BERT scores(F):', F.mean().item())
     else:
         bert_scores = 0
 
