@@ -16,6 +16,7 @@ from dataloaderraw import *
 import eval_utils
 import argparse
 import misc.utils as utils
+from misc.rewards import init_scorer
 import torch
 
 # Input arguments and options
@@ -32,7 +33,7 @@ opts.add_eval_options(parser)
 opt = parser.parse_args()
 
 # Load infos
-with open(opt.infos_path) as f:
+with open(opt.infos_path, 'rb') as f:
     infos = utils.pickle_load(f)
 
 # override and collect parameters
@@ -69,6 +70,7 @@ else:
 # So make sure to use the vocab in infos file.
 loader.ix_to_word = infos['vocab']
 
+init_scorer(opt.cached_tokens)
 
 # Set sample options
 opt.datset = opt.input_json
